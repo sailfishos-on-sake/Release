@@ -29,12 +29,14 @@ done
 [ -z "$DEVICE" ] && (echo "Device has to be specified with DEVICE= env" && exit -1)
 [ -z "$RELEASE" ] && (echo "Release has to be specified with --release option" && exit -1)
 
+DEVICE_OR_FAMILY=${FAMILY:-$DEVICE}
+
 case $VERSION in
     testing)
-		URL=http://repo.merproject.org/obs/nemo:/testing:/hw:/$VENDOR:/$DEVICE/sailfishos_${RELEASE}
+		URL=http://repo.merproject.org/obs/nemo:/testing:/hw:/$VENDOR:/$DEVICE_OR_FAMILY/sailfishos_${RELEASE}
 		;;
     devel)
-		URL=http://repo.merproject.org/obs/nemo:/devel:/hw:/$VENDOR:/$DEVICE/sailfish_latest_$PORT_ARCH
+		URL=http://repo.merproject.org/obs/nemo:/devel:/hw:/$VENDOR:/$DEVICE_OR_FAMILY/sailfish_latest_$PORT_ARCH
 		;;
     *)
 	echo "Version (devel or testing) is not specified using --testing option"
