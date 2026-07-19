@@ -4,7 +4,7 @@ set -e
 # Creates an image under mic/fe-$DEVICE-$RELEASE$EXTRA_NAME 
 # after downloading the kickstart file from the testing or devel repo.	
 
-VERSION=devel
+VERSION=testing
 RELEASE=""
 
 while :; do
@@ -30,13 +30,15 @@ done
 [ -z "$RELEASE" ] && (echo "Release has to be specified with --release option" && exit -1)
 
 DEVICE_OR_FAMILY=${FAMILY:-$DEVICE}
+RELMAJORMINOR=${RELEASE%.*.*}
+
 
 case $VERSION in
     testing)
-		URL=http://repo.merproject.org/obs/nemo:/testing:/hw:/$VENDOR:/$DEVICE_OR_FAMILY/sailfishos_${RELEASE}
+		URL=http://repo.merproject.org/obs/nemo:/testing:/hw:/$VENDOR:/$DEVICE_OR_FAMILY:/${RELMAJORMINOR}/sailfishos_${RELMAJORMINOR}_aarch64
 		;;
     devel)
-		URL=http://repo.merproject.org/obs/nemo:/devel:/hw:/$VENDOR:/$DEVICE_OR_FAMILY/sailfish_latest_$PORT_ARCH
+		URL=http://repo.merproject.org/obs/nemo:/devel:/hw:/$VENDOR:/$DEVICE_OR_FAMILY:/sailfish_latest_$PORT_ARCH
 		;;
     *)
 	echo "Version (devel or testing) is not specified using --testing option"
@@ -61,11 +63,18 @@ curl -L "$URL/$PRIMARY" --output - | gunzip > $TMPWORKDIR/primary.xml
 KICKSTART=$(xmllint --xpath "string(//*[contains(@href, 'droid-config-$DEVICE-ssu-kickstarts')]/@href)" $TMPWORKDIR/primary.xml)
 
 echo "Downloading from $URL/$KICKSTART"
-#rm -rf $TMPWORKDIR/rpm/
+rm -rf $TMPWORKDIR/rpm/
 curl -L "$URL/$KICKSTART" --output - | rpm2cpio - | cpio -idmv -D $TMPWORKDIR/rpm/
 
 # make gz not bz2
 sed -e "s/\.bz2/\.gz/g" $TMPWORKDIR/rpm/usr/share/kickstarts/Jolla-\@RELEASE\@-$DEVICE-\@ARCH\@.ks > $OUTPUTDIR/Jolla-\@RELEASE\@-$DEVICE-\@ARCH\@.ks
+
+# fix repo for testing
+if [ "$VERSION" == "testing" ]; then
+	sed -i "s|/latest/|/${RELMAJORMINOR}/|g" $OUTPUTDIR/Jolla-\@RELEASE\@-$DEVICE-\@ARCH\@.ks
+	sed -i "s|/sailfishos_latest|/sailfishos_${RELMAJORMINOR}|g" $OUTPUTDIR/Jolla-\@RELEASE\@-$DEVICE-\@ARCH\@.ks
+fi
+
 
 echo "Creating mic with $OUTPUTDIR/Jolla-\@RELEASE\@-$DEVICE-\@ARCH\@.ks "
 sudo mic create fs --pack-to=sfe-$DEVICE-$RELEASE$EXTRA_NAME.tar.gz --arch=$PORT_ARCH \
